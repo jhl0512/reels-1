@@ -295,6 +295,25 @@ container.addEventListener('wheel', (e)=>{
   const dir = e.deltaY > 0 ? 1 : -1;
   const cards = [...container.querySelectorAll('.video')];
   const y = container.scrollTop;
-  const h = conta
+  const h = container.clientHeight;
 
+  let idx = cards.findIndex(v => Math.abs(v.offsetTop - y) < h/2);
+  if(idx === -1) idx = Math.round(y / h);
+
+  const target = Math.max(0, Math.min(cards.length - 1, idx + dir));
+  const top = cards[target]?.offsetTop ?? 0;
+  container.scrollTo({ top, behavior: 'smooth' });
+
+  setTimeout(()=>{ isScrolling = false; }, 600);
+}, { passive: false });
+
+/* ----------------- user gesture for audio ----------------- */
+window.addEventListener('touchstart', ()=>{ userGestureGranted = true; applyAudioPolicy(); }, { once: true });
+window.addEventListener('click', ()=>{ userGestureGranted = true; applyAudioPolicy(); }, { once: false });
+
+/* ----------------- go ----------------- */
+loadAll();
+</script>
+</body>
+</html>
 
