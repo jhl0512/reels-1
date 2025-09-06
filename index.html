@@ -1,4 +1,4 @@
-<!-- index_permanent_hide.html -->
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -61,6 +61,67 @@
   #loading {
     text-align: center; padding: 8px; background: #fff; color: #333; font-size: .9rem;
   }
+
+  /* ===== Bottom Sheet ===== */
+  .sheet-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    opacity: 0; pointer-events: none;
+    transition: opacity .2s ease;
+    z-index: 9998;
+  }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    transform: translateY(100%);
+    background: #111; color: #fff;
+    border-top-left-radius: 16px; border-top-right-radius: 16px;
+    box-shadow: 0 -10px 30px rgba(0,0,0,.4);
+    transition: transform .28s ease;
+    z-index: 9999;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .sheet-header {
+    padding: 14px 16px 4px;
+  }
+  .sheet-drag {
+    width: 44px; height: 4px; border-radius: 999px;
+    margin: 6px auto 10px; background: rgba(255,255,255,.25);
+  }
+  .sheet-title {
+    font-weight: 700; font-size: 16px; text-align: left;
+  }
+  .sheet-list {
+    display: grid; gap: 8px;
+    padding: 12px 16px 16px;
+    max-height: min(60vh, 520px);
+    overflow-y: auto;
+  }
+  .sheet-item {
+    text-align: left;
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 14px; font-weight: 500;
+    cursor: pointer;
+  }
+  .sheet-actions {
+    display: flex; gap: 10px; padding: 10px 16px 16px;
+  }
+  .btn-cancel, .btn-confirm {
+    flex: 1; padding: 12px 14px; border-radius: 12px; border: 0; cursor: pointer; font-weight: 700;
+  }
+  .btn-cancel { background: #2a2a2a; color: #fff; }
+  .btn-confirm { background: #fff; color: #111; }
+  .sheet-open .sheet { transform: translateY(0%); }
+  .sheet-open .sheet-backdrop { opacity: 1; pointer-events: auto; }
+
+  /* prevent scroll when sheet open */
+  body.sheet-open {
+    overflow: hidden;
+    touch-action: none;
+  }
 </style>
 </head>
 <body>
@@ -118,6 +179,23 @@
   <div id="loading">로딩 중...</div>
 </div>
 
+<!-- ===== Bottom Sheet Markup ===== -->
+<div class="sheet-backdrop" id="sheet-backdrop" aria-hidden="true"></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div class="sheet-drag"></div>
+  <header class="sheet-header">
+    <div id="sheet-title" class="sheet-title">Tell us why you're not interested.</div>
+  </header>
+
+  <div class="sheet-list" id="sheet-list">
+    <!-- reason items are injected by JS -->
+  </div>
+
+  <div class="sheet-actions">
+    <button class="btn-cancel" id="btn-cancel" type="button">취소</button>
+  </div>
+</section>
+
 <script>
 /* ----------------- viewport helper ----------------- */
 function setRealHeight(){ const vh = window.innerHeight*0.01; document.documentElement.style.setProperty('--vh', `${vh}px`); }
@@ -146,7 +224,7 @@ function parseCSV(text){
   return lines.slice(1).map(line=>{
     const cols = line.split(',').map(c=>c.trim());
     const obj = {};
-    headers.forEach((h,i)=> obj[h] = cols[i] || '');
+    headers.forEach((h,i)=> obj[h] = cols[i] || '';
     return obj;
   });
 }
@@ -192,7 +270,8 @@ function createPost(row){
   if(hideBtn){
     hideBtn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      hideCategory(cat);
+      // instead of immediate hide, open bottom sheet for reason
+      openSheet(cat);
     });
   }
   return post;
@@ -311,9 +390,64 @@ container.addEventListener('wheel', (e)=>{
 window.addEventListener('touchstart', ()=>{ userGestureGranted = true; applyAudioPolicy(); }, { once: true });
 window.addEventListener('click', ()=>{ userGestureGranted = true; applyAudioPolicy(); }, { once: false });
 
+/* ----------------- Bottom Sheet Logic ----------------- */
+const sheet = document.getElementById('sheet');
+const sheetBackdrop = document.getElementById('sheet-backdrop');
+const sheetList = document.getElementById('sheet-list');
+const btnCancel = document.getElementById('btn-cancel');
+
+const REASONS = [
+  "I see this too often",
+  "Not relevant to me",
+  "I don't like this creator",
+  "I don’t like this topic",
+  "Misleading or clickbait",
+  "Low quality video",
+  "Offensive content",
+  "Other"
+];
+
+// build reason buttons
+REASONS.forEach((r)=>{
+  const b = document.createElement('button');
+  b.className = 'sheet-item';
+  b.type = 'button';
+  b.textContent = r;
+  b.addEventListener('click', ()=> onReasonSelected(r));
+  sheetList.appendChild(b);
+});
+
+let pendingHideCategory = null;
+
+function openSheet(cat){
+  pendingHideCategory = cat;
+  document.body.classList.add('sheet-open');
+  sheet.setAttribute('aria-hidden', 'false');
+  sheetBackdrop.setAttribute('aria-hidden', 'false');
+}
+
+function closeSheet(){
+  pendingHideCategory = null;
+  document.body.classList.remove('sheet-open');
+  sheet.setAttribute('aria-hidden', 'true');
+  sheetBackdrop.setAttribute('aria-hidden', 'true');
+}
+
+function onReasonSelected(reason){
+  // 여기서 reason을 서버로 보내거나 로깅할 수 있음 (현재는 콘솔)
+  console.log('Not interested reason:', reason, 'category:', pendingHideCategory);
+  if(pendingHideCategory) hideCategory(pendingHideCategory);
+  closeSheet();
+}
+
+btnCancel.addEventListener('click', closeSheet);
+sheetBackdrop.addEventListener('click', closeSheet);
+document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSheet(); });
+
 /* ----------------- go ----------------- */
 loadAll();
 </script>
 </body>
 </html>
+
 
