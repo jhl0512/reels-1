@@ -1,229 +1,180 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=0.9, viewport-fit=cover" />
-<title>Video Feed with Bottom Sheet</title>
-
-<!-- (선택) 기존 스타일 연결이 필요하다면 유지하세요 -->
-<link href="youtube_sample_globals.css" rel="stylesheet"/>
-<link href="yotuube_sample.css" rel="stylesheet"/>
-
+<title>Video Feed — Bottom Sheet “관심없음”</title>
 <style>
-  /* === 기본 레이아웃 === */
-  html, body { margin:0; padding:0; height:100vh; background:#000; overflow:hidden; }
-  body { padding-top:env(safe-area-inset-top); font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Apple SD Gothic Neo, sans-serif; }
+  html, body { margin:0; padding:0; height:100vh; background:#000; overflow:hidden; font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Apple SD Gothic Neo, sans-serif; }
   #container {
     height: calc(var(--vh, 1vh) * 100);
     overflow-y: auto;
-    scroll-snap-type: y mandatory;
     -webkit-overflow-scrolling: touch;
+    scroll-snap-type: y mandatory;
   }
   #container::-webkit-scrollbar{ display:none; }
 
-  /* === 카드 === */
   .video {
     position: relative;
     scroll-snap-align: end;
-    height: 100vh;
-    max-width: 500px;
-    margin: 0 auto;
-    overflow: hidden;
+    height: 100vh; max-width: 520px; margin: 0 auto; overflow: hidden; color:#fff;
   }
   .video video.video-bg {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-    z-index: 0; pointer-events: none;
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; pointer-events: none;
   }
   .video > * { position: relative; z-index: 1; }
 
-  .top, .body, .left, .right, .id, .music, .button { display:flex; }
-  .top { justify-content: space-between; padding: 16px; }
-  .body { height: 100%; align-items: flex-end; padding: 16px; gap: 16px; }
-  .left { flex-direction: column; color: #fff; width: 70%; }
-  .right { flex-direction: column; align-items: center; gap: 12px; margin-left: auto; }
-  .id { align-items: center; gap: 8px; }
-  .ellipse { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.85); }
-  .id-text, .title-text, .music-text, .text-wrapper { color:#fff; }
-  .title-text { font-size: 16px; font-weight: 700; margin: 6px 0; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
-  .music { align-items: center; gap: 8px; }
+  .top { display:flex; justify-content: space-between; padding: 12px 14px; }
+  .body { height: 100%; display:flex; align-items:flex-end; gap:14px; padding: 14px; }
+  .left { display:flex; flex-direction:column; gap:8px; width:70%; }
+  .id { display:flex; gap:8px; align-items:center; }
+  .ellipse { width: 30px; height:30px; border-radius: 50%; background: rgba(255,255,255,.85); }
+  .id-text{ font-weight:700; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+  .title-text { font-size: 16px; font-weight: 700; text-shadow:0 1px 2px rgba(0,0,0,.5); }
+  .music { display:flex; gap:8px; align-items:center; opacity:.9; }
+
+  .right { display:flex; flex-direction:column; gap:10px; margin-left:auto; align-items:center; }
   .button {
-    align-items: center; gap: 6px;
-    padding: 8px 10px; border: 0; border-radius: 12px;
-    background: rgba(0,0,0,0.35); color: #fff; cursor: pointer;
+    display:flex; gap:6px; align-items:center;
+    padding: 8px 10px; border:0; border-radius:12px;
+    background: rgba(0,0,0,.35); color:#fff; cursor:pointer;
     backdrop-filter: blur(3px);
   }
-  .button:active { transform: translateY(1px); }
-  .text-wrapper { font-size: 12px; font-weight: 700; }
-  .right svg * { fill:#fff; }
+  .button:active{ transform: translateY(1px); }
+  .text-wrapper { font-size: 12px; font-weight: 800; }
 
   #loading { text-align:center; padding:10px; background:#fff; color:#333; font-size:.9rem; }
+  .empty { color:#fff; text-align:center; padding:28px; max-width:720px; margin: 0 auto; white-space:pre-line; line-height:1.5; }
 
-  /* === 바텀시트 === */
-  .sheet-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,.45);
-    opacity: 0; pointer-events: none;
-    transition: opacity .2s ease;
-    z-index: 9998;
-  }
+  /* Bottom Sheet */
+  .sheet-backdrop { position: fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .2s ease; z-index:9998; }
   .sheet {
-    position: fixed; left: 0; right: 0; bottom: 0;
-    transform: translateY(100%);
-    background: #111; color: #fff;
-    border-top-left-radius: 16px; border-top-right-radius: 16px;
-    box-shadow: 0 -10px 30px rgba(0,0,0,.4);
-    transition: transform .28s ease;
-    z-index: 9999;
-    padding-bottom: env(safe-area-inset-bottom);
+    position: fixed; left:0; right:0; bottom:0; transform: translateY(100%);
+    background:#111; color:#fff; z-index:9999;
+    border-top-left-radius:16px; border-top-right-radius:16px; box-shadow:0 -10px 30px rgba(0,0,0,.4);
+    transition: transform .28s ease; padding-bottom: env(safe-area-inset-bottom);
   }
   .sheet-header { padding: 14px 16px 4px; }
-  .sheet-drag {
-    width: 44px; height: 4px; border-radius: 999px;
-    margin: 6px auto 10px; background: rgba(255,255,255,.25);
-  }
-  .sheet-title { font-weight: 800; font-size: 16px; }
-  .sheet-list {
-    display: grid; gap: 8px;
-    padding: 12px 16px 16px;
-    max-height: min(60vh, 520px);
-    overflow-y: auto;
-  }
-  .sheet-item {
-    text-align: left;
-    width: 100%;
-    background: #1a1a1a;
-    border: 1px solid rgba(255,255,255,.08);
-    border-radius: 12px;
-    padding: 12px 14px;
-    font-size: 14px; font-weight: 600;
-    cursor: pointer;
-  }
-  .sheet-actions { display:flex; gap:10px; padding: 10px 16px 16px; }
-  .btn-cancel {
-    flex: 1; padding: 12px 14px; border-radius: 12px; border: 0; cursor: pointer; font-weight: 800;
-    background: #2a2a2a; color: #fff;
-  }
+  .sheet-drag { width:44px; height:4px; border-radius:999px; margin:6px auto 10px; background:rgba(255,255,255,.25); }
+  .sheet-title { font-size:16px; font-weight:800; }
+  .sheet-list { display:grid; gap:8px; padding:12px 16px 16px; max-height:min(60vh,520px); overflow-y:auto; }
+  .sheet-item { text-align:left; width:100%; background:#1a1a1a; border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:12px 14px; font-size:14px; font-weight:600; cursor:pointer; }
+  .sheet-actions{ display:flex; gap:10px; padding:10px 16px 16px; }
+  .btn-cancel { flex:1; padding:12px 14px; border-radius:12px; border:0; cursor:pointer; font-weight:800; background:#2a2a2a; color:#fff; }
 
-  /* open 상태 */
-  body.sheet-open { overflow: hidden; touch-action: none; }
+  body.sheet-open { overflow:hidden; touch-action:none; }
   body.sheet-open .sheet { transform: translateY(0%); }
-  body.sheet-open .sheet-backdrop { opacity: 1; pointer-events: auto; }
+  body.sheet-open .sheet-backdrop { opacity:1; pointer-events:auto; }
 </style>
 </head>
 <body>
   <div id="container">
-    <!-- 카드 템플릿 (클론 후 사용) -->
+    <!-- 카드 템플릿 -->
     <article class="video" id="video-template" data-category="">
-      <div class="top">
-        <!-- 좌상단 아이콘 예시 -->
-        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 25 25"><path fill="white" d="M11.458 2.60449C16.3479 2.60449 20.3123 6.56815 20.3125 11.458C20.3125 13.5275 19.6008 15.43 18.4111 16.9375L22.0908 20.6172C22.4976 21.024 22.4976 21.684 22.0908 22.0908C21.684 22.4976 21.024 22.4976 20.6172 22.0908L16.9375 18.4111C15.43 19.6008 13.5274 20.3125 11.458 20.3125C6.56815 20.3123 2.60449 16.348 2.60449 11.458C2.60465 6.56826 6.56825 2.60466 11.458 2.60449ZM11.458 4.6875C7.71885 4.68767 4.68766 7.71885 4.6875 11.458C4.6875 15.1974 7.71875 18.2293 11.458 18.2295C15.1975 18.2295 18.2295 15.1975 18.2295 11.458C18.2293 7.71874 15.1974 4.6875 11.458 4.6875Z"/></svg>
-        <!-- 우상단 아이콘 예시 -->
-        <svg xmlns="http://www.w3.org/2000/svg" width="25" height="25" viewBox="0 0 25 25"><path fill="white" d="M12.5 17.708C13.6506 17.708 14.583 18.6414 14.583 19.792C14.5828 20.9425 13.6505 21.875 12.5 21.875C11.3495 21.875 10.4172 20.9425 10.417 19.792C10.417 18.6414 11.3494 17.708 12.5 17.708ZM12.5 10.417C13.6506 10.417 14.583 11.3494 14.583 12.5C14.583 13.6506 13.6506 14.583 12.5 14.583C11.3494 14.583 10.417 13.6506 10.417 12.5C10.417 11.3494 11.3494 10.417 12.5 10.417ZM12.5 3.125C13.6505 3.12501 14.5828 4.05757 14.583 5.20801C14.583 6.3586 13.6506 7.29198 12.5 7.29199C11.3494 7.29199 10.417 6.35861 10.417 5.20801C10.4172 4.05757 11.3495 3.125 12.5 3.125Z"/></svg>
-      </div>
-
+      <div class="top"><div style="opacity:.9"></div><div style="opacity:.9"></div></div>
       <div class="body">
         <div class="left">
-          <div class="id">
-            <div class="ellipse"></div>
-            <div class="id-text"></div>
-          </div>
-          <p class="title-text"></p>
-          <div class="music">
-            <svg xmlns="http://www.w3.org/2000/svg" width="19" height="20" viewBox="0 0 19 20"><path fill="white" d="M14.25 13.167L14.2373 13.4092C14.1158 14.6069 13.1048 15.542 11.875 15.542C10.5634 15.542 9.50016 14.4786 9.5 13.167C9.5 11.8553 10.5633 10.792 11.875 10.792C12.4839 10.792 13.0377 11.0227 13.458 11.3994V6.1582L7.52051 9.8252V15.542L7.50879 15.7842C7.38733 16.982 6.37532 17.917 5.14551 17.917C3.83407 17.9168 2.77067 16.8535 2.77051 15.542C2.77051 14.2304 3.83397 13.1672 5.14551 13.167C5.75483 13.167 6.30905 13.3982 6.72949 13.7754V7.00879L14.25 2.36328V13.167ZM5.14551 13.958C4.2712 13.9582 3.5625 14.6676 3.5625 15.542C3.56266 16.4162 4.2713 17.1248 5.14551 17.125C6.01986 17.125 6.72933 16.4163 6.72949 15.542C6.72949 14.6675 6.01996 13.958 5.14551 13.958ZM11.875 11.583C11.0005 11.583 10.292 12.2925 10.292 13.167C10.2922 14.0413 11.0006 14.75 11.875 14.75C12.7494 14.75 13.4578 14.0413 13.458 13.167C13.458 12.2925 12.7495 11.583 11.875 11.583ZM7.52051 7.4502V8.89453L13.458 5.22754V3.78223L7.52051 7.4502Z"/></svg>
-            <div class="music-text"></div>
-          </div>
+          <div class="id"><div class="ellipse"></div><div class="id-text"></div></div>
+          <div class="title-text"></div>
+          <div class="music"><span>🎵</span><div class="music-text"></div></div>
         </div>
-
         <div class="right">
-          <button class="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="25" viewBox="0 0 26 25"><path fill="white" d="M6.22949 22.396H4.14551C3.28278 22.3959 2.58313 21.6963 2.58301 20.8335V11.4585C2.58301 10.5957 3.28271 9.89618 4.14551 9.89602H6.22949V22.396ZM12.3857 2.605C12.5693 2.33447 12.9543 2.29766 13.1855 2.52883L14.0244 3.3677C14.8371 4.18055 15.1379 5.37416 14.8076 6.47512L13.9375 9.37453H20.8125C22.2506 9.37453 23.4169 10.5408 23.417 11.979C23.417 12.9578 22.8755 13.8086 22.0771 14.2534C22.5802 14.7282 22.8955 15.3997 22.8955 16.146C22.8954 17.4058 22.001 18.4555 20.8125 18.6968V21.354C20.8125 21.9293 20.3458 22.396 19.7705 22.396H8.83301C8.25787 22.3958 7.79199 21.9292 7.79199 21.354V10.0152C7.79199 9.59804 7.91716 9.1904 8.15137 8.84524L12.3857 2.605Z"/></svg>
-            <div class="text-wrapper">LIKE</div>
-          </button>
-
-          <button class="button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="25" viewBox="0 0 26 25"><path fill="white" d="M17.167 2.60449C17.742 2.60465 18.2078 3.07047 18.208 3.64551V14.9854C18.2079 15.4022 18.0827 15.8093 17.8486 16.1543L13.6143 22.3955C13.4306 22.666 13.0456 22.7028 12.8145 22.4717L11.9766 21.6328C11.1637 20.8199 10.8621 19.6255 11.1924 18.5244L12.0625 15.625H5.1875C3.74926 15.625 2.58301 14.4587 2.58301 13.0205C2.58315 12.0419 3.1237 11.19 3.92188 10.7451C3.41961 10.2705 3.10458 9.60009 3.10449 8.85449C3.10449 7.5946 3.99881 6.54303 5.1875 6.30176V3.64551C5.18768 3.07037 5.65431 2.60449 6.22949 2.60449H17.167ZM21.8545 2.60449C22.7173 2.60464 23.417 3.30414 23.417 4.16699V13.542C23.4168 14.4047 22.7172 15.1043 21.8545 15.1045H19.7705V2.60449H21.8545Z"/></svg>
-            <div class="text-wrapper">싫어요</div>
-          </button>
-
-          <button class="button btn-comment">
-            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="25" viewBox="0 0 26 25"><path fill="white" d="M3.278 0C1.744 0 .5 1.248.5 2.787v14.63c0 1.54 1.244 2.787 2.778 2.787H19.25l4.472 4.487c.656.658 1.778.192 1.778-.739v-6.535V2.787C25.5 1.248 24.256 0 22.722 0H3.278zM5.361 6.967c0-.77.622-1.393 1.39-1.393H19.25c.767 0 1.389.623 1.389 1.393 0 .77-.622 1.394-1.389 1.394H6.75c-.768 0-1.389-.623-1.389-1.394zm1.389 4.877c-.768 0-1.39.624-1.39 1.394 0 .769.622 1.393 1.39 1.393h8.333c.767 0 1.389-.624 1.389-1.393 0-.77-.622-1.394-1.389-1.394H6.75z"/></svg>
-            <div class="text-wrapper">999</div>
-          </button>
-
-          <button class="button btn-hide-category">
-            <svg width="25" height="25" viewBox="0 0 25 25" xmlns="http://www.w3.org/2000/svg"><path fill="white" d="M12.5 0c6.616 0 11.979 5.363 11.979 11.979 0 6.616-5.363 11.979-11.979 11.979S.521 18.595.521 11.979C.521 5.363 5.884 0 12.5 0zm0 10.097L8.117 5.714 6.235 7.596l4.383 4.383-4.383 4.383 1.882 1.882 4.383-4.383 4.383 4.383 1.882-1.882-4.383-4.383 4.383-4.383-1.882-1.882L12.5 10.097z"/></svg>
-            <div class="text-wrapper">관심없음</div>
-          </button>
+          <button class="button"><span>👍</span><div class="text-wrapper">LIKE</div></button>
+          <button class="button"><span>👎</span><div class="text-wrapper">싫어요</div></button>
+          <button class="button btn-hide-category"><span>🚫</span><div class="text-wrapper">관심없음</div></button>
         </div>
       </div>
     </article>
-
     <div id="loading">로딩 중...</div>
   </div>
 
-  <!-- 바텀시트 -->
+  <!-- Bottom Sheet -->
   <div class="sheet-backdrop" id="sheet-backdrop" aria-hidden="true"></div>
   <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <div class="sheet-drag"></div>
-    <header class="sheet-header">
-      <div id="sheet-title" class="sheet-title">Tell us why you're not interested.</div>
-    </header>
+    <header class="sheet-header"><div id="sheet-title" class="sheet-title">Tell us why you're not interested.</div></header>
     <div class="sheet-list" id="sheet-list"></div>
-    <div class="sheet-actions">
-      <button class="btn-cancel" id="btn-cancel" type="button">취소</button>
-    </div>
+    <div class="sheet-actions"><button class="btn-cancel" id="btn-cancel" type="button">취소</button></div>
   </section>
 
 <script>
-/* ====== 뷰포트 단위 보정 ====== */
-function setRealHeight(){
-  const vh = window.innerHeight * 0.01;
-  document.documentElement.style.setProperty('--vh', `${vh}px`);
-}
-addEventListener('resize', setRealHeight);
-addEventListener('load', setRealHeight);
+/* ---------- viewport fix ---------- */
+function setRealHeight(){ const vh = window.innerHeight*0.01; document.documentElement.style.setProperty('--vh', `${vh}px`); }
+addEventListener('resize', setRealHeight); addEventListener('load', setRealHeight);
 
-/* ====== 데모용 카테고리 목록 ======
-   실제 프로젝트의 카테고리 CSV들(예: anime.csv, idol.csv ...)에 맞춰 수정하세요. */
-let categories = ['anime','idol','travel']; // 필요시 교체
-function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-categories = shuffle(categories);
+/* ---------- 고정 카테고리 (네가 준 목록 그대로) ---------- */
+const CATEGORY_FILES = [
+  'hindi.csv',
+  'ive.csv',
+  'kdh.csv',
+  'overwatch.csv',
+  'promise9.csv',
+  'sahoor.csv',
+  'thai.csv',
+  'valorant.csv'
+];
 
-/* ====== 상태 ====== */
+/* ---------- DOM refs ---------- */
 const container = document.getElementById('container');
-const loading   = document.getElementById('loading');
-const template  = document.getElementById('video-template');
-template.removeAttribute('id'); // 템플릿 표시 방지
+const loading = document.getElementById('loading');
+const template = document.getElementById('video-template');
+template.removeAttribute('id'); // hide template
 container.removeChild(template);
 
-const permanentlyHidden = new Set(); // 제외할 카테고리 (세션 내)
-
-/* ====== CSV 파서 (간단 버전) ======
-   쉼표가 많은 데이터면 별도 CSV 라이브러리 사용 추천(PapaParse 등). */
+/* ---------- CSV parser (따옴표/쉼표 안전) ---------- */
 function parseCSV(text){
-  text = text.replace(/^\uFEFF/, '');
-  const lines = text.trim().split(/\r?\n/);
-  if (!lines.length) return [];
-  const headers = lines[0].split(',').map(h=>h.trim());
-  return lines.slice(1).map(line=>{
-    const cols = line.split(',').map(c=>c.trim());
-    const obj = {};
-    headers.forEach((h,i)=> obj[h] = (cols[i] ?? ''));
-    return obj;
-  });
+  text = (text || '').replace(/^\uFEFF/, '');
+  const rows = [];
+  let i=0, field='', row=[], inQ=false;
+  for(; i<text.length; i++){
+    const c = text[i];
+    if(c === '"'){
+      if(inQ && text[i+1] === '"'){ field += '"'; i++; }
+      else inQ = !inQ;
+    } else if(c === ',' && !inQ){
+      row.push(field); field='';
+    } else if(c === '\n' && !inQ){
+      row.push(field); rows.push(row); field=''; row=[];
+    } else { field += c; }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+
+  if(!rows.length) return [];
+  const header = rows.shift().map(h => (h||'').trim());
+  return rows
+    .filter(r => r.some(cell => (cell||'').trim() !== ''))
+    .map(cols => {
+      const obj = {};
+      header.forEach((h,idx)=> obj[h] = (cols[idx] ?? '').trim());
+      return obj;
+    });
 }
 
-/* ====== 데이터 로드 ====== */
+/* ---------- helpers ---------- */
+function get(row, keys){
+  for(const k of keys){ if(row[k]) return row[k]; }
+  const lower = Object.create(null);
+  for(const k in row){ lower[k.toLowerCase()] = k; }
+  for(const key of keys){
+    const k2 = lower[String(key).toLowerCase()];
+    if(k2 && row[k2]) return row[k2];
+  }
+  return '';
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+/* ---------- state ---------- */
+const permanentlyHidden = new Set(); // 유저가 숨긴 카테고리
 let allVideosCache = [];
+
+/* ---------- 로드 ---------- */
 async function loadAll(){
   try{
-    const results = await Promise.all(categories.map(async (cat)=>{
+    const results = await Promise.all(CATEGORY_FILES.map(async (file)=>{
+      const cat = file.replace(/\.csv$/,'');
       try{
-        const res = await fetch(`${cat}.csv`);
-        if(!res.ok) throw new Error(`${cat}.csv 로드 실패`);
+        const res = await fetch(file);
+        if(!res.ok) throw new Error(`${file} 로드 실패`);
         const text = await res.text();
         const rows = parseCSV(text).map(r => ({...r, _category: cat}));
         return shuffle(rows);
@@ -240,69 +191,62 @@ async function loadAll(){
   }
 }
 
-/* ====== 렌더링 ====== */
-function isHiddenCategory(cat){ return permanentlyHidden.has(cat); }
-
+/* ---------- 카드 ---------- */
 function createCard(row){
   const cat = row._category || '';
-  if(isHiddenCategory(cat)) return null;
+  if(permanentlyHidden.has(cat)) return null;
+
+  // 비디오 src 추출 (여러 헤더명 지원)
+  const src = get(row, ['MP4 URL','mp4','url','video','source','Video','video_url','download_url']);
+  if(!src) return null; // 소스 없으면 스킵
 
   const card = template.cloneNode(true);
   card.dataset.category = cat;
 
-  // 비디오
   const vid = document.createElement('video');
   vid.className = 'video-bg';
-  vid.src = row['MP4 URL'] || row['mp4'] || row['url'] || ''; // 컬럼명 유연 처리
-  vid.autoplay = true; vid.loop = true; vid.playsInline = true; vid.muted = true;
+  vid.src = src;
+  vid.autoplay = true; vid.loop = true; vid.playsInline = true; vid.muted = true; // 소리 기본 꺼둠(중복재생 방지)
   card.prepend(vid);
 
-  // 텍스트
-  card.querySelector('.id-text').textContent    = row['ID'] || row['channel'] || '';
-  card.querySelector('.title-text').textContent = row['TITLE'] || row['title'] || '';
-  card.querySelector('.music-text').textContent = row['MUSIC'] || row['audio'] || '';
+  const idt = card.querySelector('.id-text'); if(idt) idt.textContent = get(row, ['ID','id','channel','creator']) || cat.toUpperCase();
+  const tt  = card.querySelector('.title-text'); if(tt) tt.textContent = get(row, ['TITLE','title','caption']) || 'Untitled';
+  const mt  = card.querySelector('.music-text'); if(mt) mt.textContent = get(row, ['MUSIC','music','audio']) || '';
 
-  // 관심없음 버튼 -> 바텀시트
+  // 관심없음 버튼 → 바텀시트
   const btnHide = card.querySelector('.btn-hide-category');
-  btnHide.addEventListener('click', (e)=>{
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation();
-    openSheet(cat);
-  });
+  btnHide?.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); openSheet(cat); });
 
   return card;
 }
 
+/* ---------- 렌더 ---------- */
 function reloadVideos(){
   container.innerHTML = '';
+  let count = 0;
   for(const row of allVideosCache){
-    if(isHiddenCategory(row._category)) continue;
+    if(permanentlyHidden.has(row._category)) continue;
     const card = createCard(row);
-    if(card) container.appendChild(card);
+    if(card){ container.appendChild(card); count++; }
   }
-  if(!container.querySelector('.video')) {
-    container.innerHTML = '<div style="color:#fff;text-align:center;padding:24px;">표시할 영상이 없습니다.</div>';
+  if(!count){
+    container.innerHTML = '<div class="empty">표시할 영상이 없습니다.\nCSV 파일이 비어 있거나, 비디오 URL 컬럼명이 다를 수 있어요.\n(지원 컬럼: MP4 URL / mp4 / url / video / source ...)</div>';
   }
   loading.style.display = 'none';
 }
 
-/* ====== 카테고리 숨기기 ====== */
+/* ---------- 카테고리 숨기기 ---------- */
 function hideCategory(cat){
   if(!cat) return;
   permanentlyHidden.add(cat);
-
-  // DOM에서 즉시 제거
   [...container.querySelectorAll(`.video[data-category="${cat}"]`)].forEach(el=>{
-    const v = el.querySelector('video'); if(v){ try{ v.pause(); v.src=''; }catch(_){} }
+    const v = el.querySelector('video'); try{ v?.pause(); v && (v.src=''); }catch(e){}
     el.remove();
   });
-
-  // 캐시 기준으로도 재렌더
   reloadVideos();
 }
 
-/* ====== 바텀시트 ====== */
+/* ---------- Bottom Sheet ---------- */
 const sheet         = document.getElementById('sheet');
 const sheetBackdrop = document.getElementById('sheet-backdrop');
 const sheetList     = document.getElementById('sheet-list');
@@ -318,19 +262,14 @@ const REASONS = [
   "Offensive content",
   "Other"
 ];
-
-// 옵션 생성
 REASONS.forEach(r=>{
   const b = document.createElement('button');
-  b.type = 'button';
-  b.className = 'sheet-item';
-  b.textContent = r;
+  b.type = 'button'; b.className = 'sheet-item'; b.textContent = r;
   b.addEventListener('click', ()=> onReasonSelected(r));
   sheetList.appendChild(b);
 });
 
 let pendingHideCategory = null;
-
 function openSheet(cat){
   pendingHideCategory = cat || null;
   document.body.classList.add('sheet-open');
@@ -345,7 +284,6 @@ function closeSheet(){
 }
 function onReasonSelected(reason){
   // 필요시 서버 로깅 가능
-  // console.log('reason:', reason, 'cat:', pendingHideCategory);
   if(pendingHideCategory) hideCategory(pendingHideCategory);
   closeSheet();
 }
@@ -353,11 +291,11 @@ btnCancel.addEventListener('click', closeSheet);
 sheetBackdrop.addEventListener('click', closeSheet);
 document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSheet(); });
 
-/* ====== 시작 ====== */
-loadAll();
+/* ---------- 시작 ---------- */
+function go(){ setRealHeight(); loadAll(); }
+go();
 </script>
 </body>
 </html>
-
 
 
