@@ -1,4 +1,4 @@
-<!-- index_permanent_hide.html -->
+<!-- index (2).html — bottom sheet + toast added; original structure preserved -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -26,6 +26,7 @@
     height: 100vh;
     max-width: 500px;
     overflow: hidden;
+    margin: 0 auto;
   }
   .video video.video-bg {
     position: absolute; top: 0; left: 0;
@@ -41,7 +42,10 @@
   .right { flex-direction: column; align-items: center; gap: 12px; margin-left: auto; }
   .id { align-items: center; gap: 8px; }
   .ellipse { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.85); }
-  .id-text, .title-text, .music-text, .text-wrapper { color: #fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Apple SD Gothic Neo, sans-serif; }
+  .id-text, .title-text, .music-text, .text-wrapper {
+    color: #fff;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Apple SD Gothic Neo, sans-serif;
+  }
   .title-text { font-size: 16px; font-weight: 600; margin: 6px 0; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
   .music { align-items: center; gap: 8px; }
   .rectangle-1 { flex: 1 0 auto; height: 2px; background: rgba(255,255,255,0.6); }
@@ -185,7 +189,7 @@ window.addEventListener('resize', setRealHeight);
 window.addEventListener('load', setRealHeight);
 
 /* ----------------- state ----------------- */
-let categories = ['hindi','ive','kdh','overwatch','promise9','sahoor','thai','valorant']; // fetch 시 .csv 붙임
+let categories = ['car', 'seoul', 'figma', 'guitar']; // fetch 시 .csv 붙임
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 categories = shuffle(categories);
 
@@ -253,7 +257,7 @@ function createPost(row){
   if(hideBtn){
     hideBtn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      openBottomSheet(cat); // ← 변경: 바텀시트 열기
+      openBottomSheet(cat); // ← 관심없음 바텀시트 열기
     });
   }
   return post;
@@ -403,7 +407,7 @@ if(sheetCancel) sheetCancel.addEventListener('click', closeBottomSheet);
 if(sheetList) sheetList.addEventListener('click', (e)=>{
   const btn = e.target.closest('.sheet-item');
   if(!btn) return;
-  const reason = btn.dataset.reason; // 필요 시 로깅
+  const reason = btn.dataset.reason;
   const cat = pendingCategory;
   closeBottomSheet();
   if(cat){
@@ -417,4 +421,5 @@ loadAll();
 </script>
 </body>
 </html>
+
 
