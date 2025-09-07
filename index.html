@@ -1,4 +1,4 @@
-<!-- index.html (updated) -->
+<!-- index (2).html : bottom sheet + toast added, rest of structure preserved -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -26,6 +26,7 @@
     height: 100vh;
     max-width: 500px;
     overflow: hidden;
+    margin: 0 auto;
   }
   .video video.video-bg {
     position: absolute; top: 0; left: 0;
@@ -41,7 +42,10 @@
   .right { flex-direction: column; align-items: center; gap: 12px; margin-left: auto; }
   .id { align-items: center; gap: 8px; }
   .ellipse { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.85); }
-  .id-text, .title-text, .music-text, .text-wrapper { color: #fff; font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Apple SD Gothic Neo, sans-serif; }
+  .id-text, .title-text, .music-text, .text-wrapper {
+    color: #fff;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Noto Sans, Apple SD Gothic Neo, sans-serif;
+  }
   .title-text { font-size: 16px; font-weight: 600; margin: 6px 0; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
   .music { align-items: center; gap: 8px; }
   .rectangle-1 { flex: 1 0 auto; height: 2px; background: rgba(255,255,255,0.6); }
@@ -67,11 +71,9 @@
     padding: 10px 14px; border-radius: 12px; font-size: 14px;
     box-shadow: 0 6px 20px rgba(0,0,0,.35);
     opacity: 0; z-index: 9999; pointer-events: none;
-    transition: opacity .2s ease, transform .2s ease;
+    transition: opacity .18s ease, transform .18s ease;
   }
-  .toast.show {
-    opacity: 1; transform: translateX(-50%) translateY(8px);
-  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(8px); }
 
   /* ===== Bottom Sheet ===== */
   .sheet-backdrop {
@@ -99,7 +101,6 @@
   .sheet-close {
     background: rgba(255,255,255,0.15); color:#fff; border:0; border-radius:10px; padding:10px 12px; cursor:pointer;
   }
-
   @media (min-width: 540px){
     .sheet { margin: 0 auto; max-width: 520px; border-top-left-radius: 18px; border-top-right-radius: 18px; }
   }
@@ -167,7 +168,6 @@
 <div id="bottom-sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" aria-hidden="true">
   <div class="sheet-title" id="sheet-title">관심이 없는 이유를 알려주세요</div>
   <div class="sheet-list" id="sheet-list">
-    <!-- 이유 항목들 -->
     <button class="sheet-item" data-reason="관련성이 없음">관련성이 없음</button>
     <button class="sheet-item" data-reason="지루함">지루함</button>
     <button class="sheet-item" data-reason="너무 성적임">너무 성적임</button>
@@ -189,7 +189,11 @@ window.addEventListener('resize', setRealHeight);
 window.addEventListener('load', setRealHeight);
 
 /* ----------------- state ----------------- */
-let categories = ['car', 'seoul', 'figma', 'guitar'];
+/* 사용자가 명시한 카테고리 CSV 파일들 */
+let categories = [
+  'hindi','ive','kdh','overwatch','promise9','sahoor','thai','valorant'
+]; // '.csv'는 fetch 시점에 붙입니다.
+
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 categories = shuffle(categories);
 
@@ -204,13 +208,14 @@ container.removeChild(template);
 
 /* ----------------- csv ----------------- */
 function parseCSV(text){
-  text = text.replace(/^\uFEFF/,'');
+  text = text.replace(/^\uFEFF/,''); // BOM 제거
   const lines = text.trim().split(/\r?\n/);
+  if(lines.length === 0) return [];
   const headers = lines[0].split(',').map(h=>h.trim());
   return lines.slice(1).map(line=>{
     const cols = line.split(',').map(c=>c.trim());
     const obj = {};
-    headers.forEach((h,i)=> obj[h] = cols[i] || '';
+    headers.forEach((h,i)=> { obj[h] = cols[i] || ''; });
     return obj;
   });
 }
@@ -243,20 +248,20 @@ function createPost(row){
 
   const vid = document.createElement('video');
   vid.className = 'video-bg';
-  vid.setAttribute('data-src', row['MP4 URL']);
+  vid.setAttribute('data-src', row['MP4 URL'] || row['mp4'] || row['video'] || '');
   vid.autoplay = true; vid.loop = true; vid.playsInline = true;
   vid.muted = true; vid.preload = 'none';
   post.prepend(vid);
 
-  const idt = post.querySelector('.id-text'); if(idt) idt.textContent = row['ID'] || '';
-  const tt  = post.querySelector('.title-text'); if(tt) tt.textContent = row['TITLE'] || '';
-  const mt  = post.querySelector('.music-text'); if(mt) mt.textContent = row['MUSIC'] || '';
+  const idt = post.querySelector('.id-text'); if(idt) idt.textContent = row['ID'] || row['Channel'] || '';
+  const tt  = post.querySelector('.title-text'); if(tt) tt.textContent = row['TITLE'] || row['Title'] || '';
+  const mt  = post.querySelector('.music-text'); if(mt) mt.textContent = row['MUSIC'] || row['BGM'] || '';
 
   const hideBtn = post.querySelector('.btn-hide-category');
   if(hideBtn){
     hideBtn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      openBottomSheet(cat); // ← 바텀시트 열기 (카테고리 전달)
+      openBottomSheet(cat); // 바텀시트 열기 (카테고리 전달)
     });
   }
   return post;
@@ -348,7 +353,7 @@ function observeVideos(){
   document.querySelectorAll('.video video.video-bg').forEach(v=>observer.observe(v));
 }
 
-/* ----------------- snap scroll ----------------- */
+/* ----------------- snap scroll (one card at a time) ----------------- */
 let isScrolling = false;
 container.addEventListener('wheel', (e)=>{
   e.preventDefault();
@@ -386,41 +391,31 @@ let toastTimer = null;
 
 function openBottomSheet(category){
   pendingCategory = category;
-  sheet.setAttribute('aria-hidden','false');
-  sheetBackdrop.setAttribute('aria-hidden','false');
-  sheet.classList.add('open');
-  sheetBackdrop.classList.add('open');
+  if(sheet){ sheet.setAttribute('aria-hidden','false'); sheet.classList.add('open'); }
+  if(sheetBackdrop){ sheetBackdrop.setAttribute('aria-hidden','false'); sheetBackdrop.classList.add('open'); }
 }
-
 function closeBottomSheet(){
-  sheet.setAttribute('aria-hidden','true');
-  sheetBackdrop.setAttribute('aria-hidden','true');
-  sheet.classList.remove('open');
-  sheetBackdrop.classList.remove('open');
+  if(sheet){ sheet.setAttribute('aria-hidden','true'); sheet.classList.remove('open'); }
+  if(sheetBackdrop){ sheetBackdrop.setAttribute('aria-hidden','true'); sheetBackdrop.classList.remove('open'); }
   pendingCategory = null;
 }
-
 function showToast(message, durationMs=5000){
+  if(!toast) return;
   toast.textContent = message;
   toast.classList.add('show');
   if(toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>{
-    toast.classList.remove('show');
-  }, durationMs);
+  toastTimer = setTimeout(()=>{ toast.classList.remove('show'); }, durationMs);
 }
-
-sheetBackdrop.addEventListener('click', closeBottomSheet);
-sheetCancel.addEventListener('click', closeBottomSheet);
-
-sheetList.addEventListener('click', (e)=>{
+if(sheetBackdrop) sheetBackdrop.addEventListener('click', closeBottomSheet);
+if(sheetCancel) sheetCancel.addEventListener('click', closeBottomSheet);
+if(sheetList) sheetList.addEventListener('click', (e)=>{
   const btn = e.target.closest('.sheet-item');
   if(!btn) return;
-  const reason = btn.dataset.reason;
-  // 필요 시 reason 로깅 가능: console.log('관심없음 사유:', reason);
+  const reason = btn.dataset.reason; // 필요하면 로깅/전송
   const cat = pendingCategory;
   closeBottomSheet();
   if(cat){
-    hideCategory(cat); // 기존 로직 그대로 사용해 같은 카테고리 숨김
+    hideCategory(cat); // 동일 카테고리 숨김 (기존 로직 재사용)
     showToast('비슷한 동영상이 더 적게 표시됩니다.', 5000); // 5초 토스트
   }
 });
