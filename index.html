@@ -419,8 +419,112 @@ if(sheetList) sheetList.addEventListener('click', (e)=>{
 /* ----------------- go ----------------- */
 loadAll();
 </script>
+
+<!-- =================== (추가) CSV 내보내기 버튼: 고정 오버레이 =================== -->
+<button id="btn-export" type="button"
+  aria-label="CSV 내보내기"
+  style="position:fixed;right:16px;bottom:16px;z-index:10000;background:rgba(17,17,17,.95);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:10px 12px;font-size:13px;line-height:1;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;">
+  CSV
+</button>
+
+<!-- =================== (추가) 관심없음 로깅 + CSV Export (별도 스크립트, 원본 변경 X) =================== -->
+<script>
+(function(){
+  const LOG_STORAGE_KEY = 'not_interested_logs_v1';
+
+  function getNILogs(){
+    try { return JSON.parse(localStorage.getItem(LOG_STORAGE_KEY) || '[]'); }
+    catch { return []; }
+  }
+  function saveNILogs(logs){
+    localStorage.setItem(LOG_STORAGE_KEY, JSON.stringify(logs));
+  }
+  function logNotInterested(entry){
+    const logs = getNILogs();
+    logs.push(entry);
+    saveNILogs(logs);
+    try { console.debug('[NI LOG]', entry); } catch(e){}
+  }
+  function exportNILogsToCSV(){
+    const logs = getNILogs();
+    if(!logs.length){ alert('저장된 로그가 없습니다.'); return; }
+    const headers = ['ts_iso','ts_local','reason','category','title','id','music','video_url'];
+    const rows = logs.map(o => headers.map(h => (String(o[h] ?? '')).replaceAll('"','""')));
+    const csv = [headers.join(','), ...rows.map(r => `"${r.join('","')}"`)].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const d = new Date();
+    a.href = url;
+    a.download = `not_interested_logs_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  document.getElementById('btn-export')?.addEventListener('click', exportNILogsToCSV);
+
+  function getActiveCard(){
+    let el = document.querySelector('.video[data-active="true"]');
+    if (el) return el;
+    const cards = Array.from(document.querySelectorAll('.video'));
+    if (!cards.length) return null;
+    const center = window.innerHeight / 2;
+    let best = null, bestDist = Infinity;
+    cards.forEach(card=>{
+      const r = card.getBoundingClientRect();
+      const mid = r.top + r.height/2;
+      const d = Math.abs(mid - center);
+      if (d < bestDist) { best = card; bestDist = d; }
+    });
+    return best;
+  }
+  function extractRow(card){
+    if(!card) return null;
+    const getText = sel => card.querySelector(sel)?.textContent?.trim() || '';
+    const v = card.querySelector('video.video-bg, video');
+    return {
+      TITLE: getText('.title-text'),
+      ID: getText('.id-text'),
+      MUSIC: getText('.music-text'),
+      'MP4 URL': v?.currentSrc || v?.src || ''
+    };
+  }
+
+  // 바텀시트 사유 클릭 로깅 (원본 핸들러와 별개로 캡처 단계에서 가볍게 후킹)
+  const list = document.getElementById('sheet-list');
+  if(list && !list.__ni_wired){
+    list.__ni_wired = true;
+    list.addEventListener('click', function(e){
+      const btn = e.target.closest('.sheet-item, [data-reason], button');
+      if(!btn) return;
+      const reason = btn.getAttribute('data-reason') || btn.textContent.trim() || '';
+      let category = '';
+      try { if (typeof pendingCategory !== 'undefined' && pendingCategory) category = pendingCategory; } catch(e){}
+      if (!category) category = btn.getAttribute('data-category') || '';
+      const card = getActiveCard();
+      if (!category && card) category = card.getAttribute('data-category') || '';
+      const row = extractRow(card);
+      const now = new Date();
+      logNotInterested({
+        ts_iso: now.toISOString(),
+        ts_local: now.toLocaleString(),
+        reason: reason,
+        category: category,
+        title: row?.TITLE ?? '',
+        id: row?.ID ?? '',
+        music: row?.MUSIC ?? '',
+        video_url: row?.['MP4 URL'] ?? ''
+      });
+    }, true);
+  }
+
+  // 콘솔에서도 사용 가능
+  window.exportNI = { get: getNILogs, exportCSV: exportNILogsToCSV };
+})();
+</script>
+
 </body>
 </html>
+
 
 
 
